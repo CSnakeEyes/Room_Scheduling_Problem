@@ -41,14 +41,14 @@ public class Main {
 
     long deadline = System.currentTimeMillis() + (1000 * TIME_LIMIT_SECONDS);
 
-    boolean[] assignment = new boolean[test1.courses.size()];
-
     // Add your seach algorithms here, each with a unique number
     Schedule solution = null;
     if (algorithm == 0) {
       solution = search.naiveBaseline(test1, deadline);
     } else if (algorithm == 1) {
       solution = search.backtrackAlg(test1, deadline);
+    } else if(algorithm == 2) {
+      solution = search.simulatedAnnealingAlg(test1, deadline);
     } else {
       System.out.println("ERROR: Given algorithm number does not exist!");
       System.exit(1);

@@ -1,4 +1,127 @@
+import java.util.*;
+
 public class SearchAlgorithm {
+
+  public Schedule simulatedAnnealingAlg(SchedulingProblem problem, long deadline) {
+    Schedule solution = problem.getEmptySchedule();
+    boolean[] assignment = new boolean[problem.courses.size()];
+
+    solution = iterativeSA(problem, solution, assignment, deadline);
+
+    return solution;
+  }
+
+  public Schedule iterativeSA(SchedulingProblem problem, Schedule currentSolution, boolean[] assignment, long deadline) {
+    int time = 100;
+    double tmax = 5000;
+    double tmin = 10;
+    double coolingRate = 0.5;
+
+    currentSolution = naiveBaseline(problem, deadline);
+
+    for(int i = 0; i < time; i++) {
+      if(i % 10 == 0) tmax *= coolingRate;
+      if(tmax <= tmin) return currentSolution;
+      Schedule nextSolution = move(currentSolution, assignment, problem);
+      double eCurrent = problem.evaluateSchedule(currentSolution);
+      double eNext = problem.evaluateSchedule(nextSolution);
+      double deltaE =  eNext - eCurrent;
+      if(deltaE > 0) currentSolution =  nextSolution;
+      else{
+        if(probabilityMet(deltaE,tmax)) currentSolution = nextSolution;
+      }
+      System.out.println(i);
+    }
+    return currentSolution;
+  }
+
+  Schedule move(Schedule currentSolution, boolean[] assignment, SchedulingProblem problem) {
+    Schedule newSolution = createCopy(currentSolution, problem);
+
+    int firstCourse = -1;
+    int secondCourse = -1;
+    int firstTimeSlot = -1;
+    int secondTimeSlot = -1;
+
+    for(int i = 0; i < newSolution.schedule.length; i++) {        // Rows = Rooms
+      for(int j = 0; j < newSolution.schedule[i].length; ++j) {   // Columns = Timeslots
+        if (firstCourse == -1 && newSolution.schedule[i][j] > -1) {
+          firstCourse = newSolution.schedule[i][j];
+          firstTimeSlot = j;
+        } 
+        if(secondCourse == -1 && newSolution.schedule[i][j] > -1) {
+          secondCourse = newSolution.schedule[i][j];
+          secondTimeSlot = j;
+        }
+
+        if(firstCourse > -1 && secondCourse > -1) {
+          double firstBonus = problem.courses.get(firstCourse).timeSlotValues[firstTimeSlot];
+          double secondBonus = problem.courses.get(secondCourse).timeSlotValues[secondTimeSlot];
+          double actualBonus = firstBonus + secondBonus;
+
+          double newFBonus = problem.courses.get(firstCourse).timeSlotValues[secondTimeSlot];
+          double newSBonus = problem.courses.get(secondCourse).timeSlotValues[firstTimeSlot];
+          double newBonus = newFBonus + newSBonus;
+
+          if(actualBonus < newBonus) {
+            newSolution.schedule[i][firstTimeSlot] = secondCourse;
+            newSolution.schedule[i][secondTimeSlot] = firstCourse;
+            return newSolution;
+          } else {
+            firstCourse = -1;
+            secondCourse = -1;
+            firstTimeSlot = -1;
+            secondTimeSlot = -1;
+          }
+        }
+      }
+    }
+
+    return newSolution;
+  }
+
+  Schedule createCopy(Schedule current, SchedulingProblem problem) {
+    Schedule copy = problem.getEmptySchedule();
+
+    for(int i = 0; i < current.schedule.length; i++) {
+      for(int j = 0; j < current.schedule[i].length; j++) {
+        copy.schedule[i][j] = current.schedule[i][j];
+      }
+    }
+
+    return copy;
+  }
+
+  boolean probabilityMet(double deltaE, double t) {
+    Random random = new Random();
+    double prob = random.nextDouble() * 1;
+    double power = deltaE / t;
+
+    return Math.exp(power) > prob ? true : false;
+  }
+
+  Schedule initialSchedule(SchedulingProblem problem, Schedule solution, boolean[] assignment) {
+    Random random = new Random();
+
+    int courseIndex = random.nextInt(problem.courses.size());;
+    Course c = problem.courses.get(courseIndex);
+
+    for(int i = 0; i < c.timeSlotValues.length; i++){
+      for(int j = 0; j < problem.rooms.size(); j++) {
+        if (solution.schedule[j][i] < 0) {
+            while(!assignment[courseIndex]) {
+              courseIndex = random.nextInt(problem.courses.size());
+              c = problem.courses.get(courseIndex);
+              System.out.println("I am here!");
+            }
+            solution.schedule[j][i] = courseIndex;
+            assignment[courseIndex] = true;
+        }
+      }
+    }
+
+    return solution;
+  }
 
   // Your search algorithm should return a solution in the form of a valid
   // schedule before the deadline given (deadline is given by system time in ms)
