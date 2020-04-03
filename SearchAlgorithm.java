@@ -18,6 +18,7 @@ public class SearchAlgorithm {
     double coolingRate = 0.5;
 
     currentSolution = naiveBaseline(problem, deadline);
+    // currentSolution = initialSchedule(problem, currentSolution, assignment);
 
     for(int i = 0; i < time; i++) {
       if(i % 10 == 0) tmax *= coolingRate;
@@ -35,50 +36,81 @@ public class SearchAlgorithm {
     return currentSolution;
   }
 
-  Schedule move(Schedule currentSolution, boolean[] assignment, SchedulingProblem problem) {
-    Schedule newSolution = createCopy(currentSolution, problem);
+  int pickRandomCourse(SchedulingProblem problem, boolean[] assignment) {
+    boolean picked = false;
+    Random random = new Random();
 
-    int firstCourse = -1;
-    int secondCourse = -1;
-    int firstTimeSlot = -1;
-    int secondTimeSlot = -1;
-
-    for(int i = 0; i < newSolution.schedule.length; i++) {        // Rows = Rooms
-      for(int j = 0; j < newSolution.schedule[i].length; ++j) {   // Columns = Timeslots
-        if (firstCourse == -1 && newSolution.schedule[i][j] > -1) {
-          firstCourse = newSolution.schedule[i][j];
-          firstTimeSlot = j;
-        } 
-        if(secondCourse == -1 && newSolution.schedule[i][j] > -1) {
-          secondCourse = newSolution.schedule[i][j];
-          secondTimeSlot = j;
-        }
-
-        if(firstCourse > -1 && secondCourse > -1) {
-          double firstBonus = problem.courses.get(firstCourse).timeSlotValues[firstTimeSlot];
-          double secondBonus = problem.courses.get(secondCourse).timeSlotValues[secondTimeSlot];
-          double actualBonus = firstBonus + secondBonus;
-
-          double newFBonus = problem.courses.get(firstCourse).timeSlotValues[secondTimeSlot];
-          double newSBonus = problem.courses.get(secondCourse).timeSlotValues[firstTimeSlot];
-          double newBonus = newFBonus + newSBonus;
-
-          if(actualBonus < newBonus) {
-            newSolution.schedule[i][firstTimeSlot] = secondCourse;
-            newSolution.schedule[i][secondTimeSlot] = firstCourse;
-            return newSolution;
-          } else {
-            firstCourse = -1;
-            secondCourse = -1;
-            firstTimeSlot = -1;
-            secondTimeSlot = -1;
-          }
-        }
+    while(!picked) {
+      int courseIndex = random.nextInt(problem.courses.size());
+      if(!assignment[courseIndex]) {
+        assignment[courseIndex] = true;
+        return courseIndex;
       }
     }
 
-    return newSolution;
+    return -1;
   }
+
+  Schedule move(Schedule currentSolution, boolean[] assignment, SchedulingProblem problem) {
+    Schedule newSolution = createCopy(currentSolution, problem);
+    int newCourseIndex = pickRandomCourse(problem, assignment);
+    Course c = problem.courses.get(newCourseIndex);
+
+    for(int i = 0; i < c.timeSlotValues.length; i++) {
+      for(int j = 0; j < problem.rooms.size(); j++) {
+        if(newSolution.schedule[j][i] > -1) {
+          newSolution.schedule[j][i] = newCourseIndex;
+          return newSolution;
+        }
+      }
+    }
+    return null;
+  }
+
+  // Schedule move(Schedule currentSolution, boolean[] assignment, SchedulingProblem problem) {
+  //   Schedule newSolution = createCopy(currentSolution, problem);
+
+  //   int firstCourse = -1;
+  //   int secondCourse = -1;
+  //   int firstTimeSlot = -1;
+  //   int secondTimeSlot = -1;
+
+  //   for(int i = 0; i < newSolution.schedule.length; i++) {        // Rows = Rooms
+  //     for(int j = 0; j < newSolution.schedule[i].length; ++j) {   // Columns = Timeslots
+  //       if (firstCourse == -1 && newSolution.schedule[i][j] > -1) {
+  //         firstCourse = newSolution.schedule[i][j];
+  //         firstTimeSlot = j;
+  //       } 
+  //       if(secondCourse == -1 && newSolution.schedule[i][j] > -1) {
+  //         secondCourse = newSolution.schedule[i][j];
+  //         secondTimeSlot = j;
+  //       }
+
+  //       if(firstCourse > -1 && secondCourse > -1) {
+  //         double firstBonus = problem.courses.get(firstCourse).timeSlotValues[firstTimeSlot];
+  //         double secondBonus = problem.courses.get(secondCourse).timeSlotValues[secondTimeSlot];
+  //         double actualBonus = firstBonus + secondBonus;
+
+  //         double newFBonus = problem.courses.get(firstCourse).timeSlotValues[secondTimeSlot];
+  //         double newSBonus = problem.courses.get(secondCourse).timeSlotValues[firstTimeSlot];
+  //         double newBonus = newFBonus + newSBonus;
+
+  //         if(actualBonus < newBonus) {
+  //           newSolution.schedule[i][firstTimeSlot] = secondCourse;
+  //           newSolution.schedule[i][secondTimeSlot] = firstCourse;
+  //           return newSolution;
+  //         } else {
+  //           firstCourse = -1;
+  //           secondCourse = -1;
+  //           firstTimeSlot = -1;
+  //           secondTimeSlot = -1;
+  //         }
+  //       }
+  //     }
+  //   }
+
+  //   return newSolution;
+  // }
 
   Schedule createCopy(Schedule current, SchedulingProblem problem) {
     Schedule copy = problem.getEmptySchedule();
